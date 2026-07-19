@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AXION BLE · Dashboard</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div>
+      <h1>AXION BLE</h1>
+      <div class="tag">Zone localization</div>
+    </div>
+  </div>
+  <nav class="links">
+    <a href="/" class="active">Dashboard</a>
+    <a href="/beacons">Beacons</a>
+  </nav>
+  <div class="spacer"></div>
+  <span id="conn" class="pill"><span class="dot"></span> connecting…</span>
+</header>
+
+<main class="wrap">
+  <h2 class="page-title">Live zone status</h2>
+  <p class="page-sub">Operators detected per zone, updated in real time. <span id="updated"></span></p>
+  <section id="zones" class="zones"></section>
+</main>
+
+<script>
+const COLORS = { A: "#38bdf8", B: "#34d399", C: "#f59e0b" };
+const zonesEl = document.getElementById("zones");
+const connEl = document.getElementById("conn");
+const updatedEl = document.getElementById("updated");
+
+function initials(name) {
+  const parts = (name || "?").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+
+function render(state) {
+  const atoms = state.atoms || {};
+  const zones = state.zones || {};
+  const order = Object.keys(atoms).sort((a, b) => atoms[a].zone.localeCompare(atoms[b].zone));
+
+  zonesEl.innerHTML = order.map(id => {
+    const a = atoms[id];
+    const z = a.zone;
+    const zdata = zones[z] || { count: 0, operators: [] };
+    const ops = zdata.operators || [];
+    const color = COLORS[z] || "#38bdf8";
+    const opsHtml = ops.length
+      ? ops.map(o => `
+        <li>
+          <span class="avatar" style="--z:${color}">${initials(o.operator)}</span>
+          <span class="op-name">${o.operator}</span>
+          <span class="op-badge">${o.badge || ""}</span>
+          <span class="op-rssi">${o.rssi != null ? o.rssi + " dBm" : ""}</span>
+        </li>`).join("")
+      : `<div class="empty">no operators in this zone</div>`;
+    return `
+      <article class="zone" style="--z:${color}">
+        <div class="zone-head">
+          <div class="zone-name">
+            <div class="zone-badge" style="--z:${color}">${z}</div>
+            <div>
+              <h2>ZONE ${z}</h2>
+              <div class="atom-id">${id}</div>
+            </div>
+          </div>
+          <span class="status ${a.online ? "on" : "off"}"><span class="dot"></span>${a.online ? "ONLINE" : "OFFLINE"}</span>
+        </div>
+        <ul class="ops">${opsHtml}</ul>
+        <div class="zone-foot">
+          <span class="count" style="--z:${color}">${zdata.count}</span>
+          <span class="count-label">operator(s) present</span>
+        </div>
+      </article>`;
+  }).join("");
+
+  if (state.ts) {
+    const t = new Date(state.ts * 1000);
+    updatedEl.textContent = "Last update " + t.toLocaleTimeString();
+  }
+}
+
+function setConn(ok, label) {
+  connEl.className = "pill " + (ok ? "ok" : "bad");
+  connEl.innerHTML = `<span class="dot"></span> ${label}`;
+}
+
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => setConn(true, "live");
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose = () => { setConn(false, "reconnecting…"); setTimeout(connect, 1500); };
+  ws.onerror = () => ws.close();
+}
+
+fetch("/api/state").then(r => r.json()).then(render).catch(() => {});
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+menu "AXION"
+
+    config AXION_ATOM_ID
+        string "ATOM identifier (atom-a|atom-b|atom-c)"
+        default "atom-a"
+
+    config AXION_ZONE
+        string "Monitored zone (A|B|C)"
+        default "A"
+
+    config AXION_WIFI_SSID
+        string "2.4 GHz Wi-Fi SSID"
+        default ""
+        help
+            Empty = Wi-Fi disabled (firmware runs scan + filter only, useful
+            for the BLE/filter phases). The ESP32 only supports 2.4 GHz.
+
+    config AXION_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config AXION_API_URL
+        string "API base URL (no trailing slash)"
+        default "http://192.168.0.10:8000"
+        help
+            The firmware POSTs to <URL>/api/readings and fetches the whitelist
+            from <URL>/api/beacons/active.
+
+endmenu

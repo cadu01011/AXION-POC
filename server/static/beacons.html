@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AXION BLE · Beacons</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div>
+      <h1>AXION BLE</h1>
+      <div class="tag">Zone localization</div>
+    </div>
+  </div>
+  <nav class="links">
+    <a href="/">Dashboard</a>
+    <a href="/beacons" class="active">Beacons</a>
+  </nav>
+  <div class="spacer"></div>
+  <span id="count" class="pill"><span class="dot"></span> 0 registered</span>
+</header>
+
+<main class="wrap">
+  <h2 class="page-title">Beacon registry</h2>
+  <p class="page-sub">Each beacon (badge) maps a MAC to an operator. Only registered, active beacons are counted.</p>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Add beacon</h3></div>
+    <form id="form" class="add">
+      <input id="operator" placeholder="Operator (e.g. John)" required>
+      <input id="badge" placeholder="Badge (e.g. CRC005)" required>
+      <input id="mac" placeholder="MAC (AA:BB:CC:DD:EE:FF)" required>
+      <button type="submit">+ Add</button>
+    </form>
+    <div id="err" class="form-error" hidden></div>
+    <table>
+      <thead>
+        <tr><th>Operator</th><th>Badge</th><th>MAC</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const rowsEl = document.getElementById("rows");
+const errEl = document.getElementById("err");
+const countEl = document.getElementById("count");
+
+function showError(msg) {
+  errEl.textContent = msg;
+  errEl.hidden = !msg;
+}
+
+async function load() {
+  const bs = await (await fetch("/api/beacons")).json();
+  const active = bs.filter(b => b.active).length;
+  countEl.className = "pill ok";
+  countEl.innerHTML = `<span class="dot"></span> ${active} active / ${bs.length} registered`;
+  rowsEl.innerHTML = bs.length ? bs.map(b => `
+    <tr>
+      <td>${b.operator}</td>
+      <td>${b.badge}</td>
+      <td class="mac">${b.mac}</td>
+      <td><span class="chip ${b.active ? "on" : "off"}">${b.active ? "ACTIVE" : "INACTIVE"}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="ghost" onclick="toggle(${b.id}, ${b.active ? 0 : 1})">${b.active ? "Disable" : "Enable"}</button>
+          <button class="danger" onclick="remove(${b.id})">Remove</button>
+        </div>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="5" class="table-empty">No beacons registered yet.</td></tr>`;
+}
+
+async function toggle(id, active) {
+  await fetch(`/api/beacons/${id}`, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ active: !!active })
+  });
+  load();
+}
+
+async function remove(id) {
+  if (!confirm("Remove this beacon?")) return;
+  await fetch(`/api/beacons/${id}`, { method: "DELETE" });
+  load();
+}
+
+document.getElementById("form").onsubmit = async e => {
+  e.preventDefault();
+  showError("");
+  const body = {
+    operator: document.getElementById("operator").value,
+    badge: document.getElementById("badge").value,
+    mac: document.getElementById("mac").value,
+  };
+  const r = await fetch("/api/beacons", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) { showError((await r.json()).detail || "error"); return; }
+  e.target.reset();
+  load();
+};
+
+load();
+</script>
+</body>
+</html>
