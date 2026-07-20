@@ -58,5 +58,4 @@ python tools/simulator.py http://127.0.0.1:8000 --seed  # end-to-end against the
 | [docs/configuration.md](docs/configuration.md) | Every tunable constant |
 | [docs/testing.md](docs/testing.md) | Unit, simulator, mock and on-device tests |
 | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Naming and documentation conventions |
-| [docs/GUIA_DO_DESENVOLVEDOR.md](docs/GUIA_DO_DESENVOLVEDOR.md) | Line-by-line code walkthrough (pt-BR) |
 | [PLANO_IMPLEMENTACAO.md](PLANO_IMPLEMENTACAO.md) | Phased implementation plan (pt-BR) |
